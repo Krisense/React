@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 import Home from "./pages/Home";
 import Login from "./pages/Login"; // Создайте этот компонент
 import Dashboard from "./pages/Dashboard"; // Создайте этот компонент
+import Lesson from "./pages/Lesson";
+import LessonsList from "./pages/LessonsList";
 
 function App() {
   const [user, setUser] = useState(null);
@@ -29,7 +31,8 @@ function App() {
         {/* Публичные маршруты */}
         <Route path="/" element={<Home />} />
         <Route path="/login" element={<Login />} />
-
+        <Route path="/lessons" element={<LessonsList />} />
+        <Route path="/lessons/:lessonId" element={<Lesson />} /> 
         {/* Защищенные маршруты */}
         <Route 
           path="/dashboard" 
