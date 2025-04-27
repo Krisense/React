@@ -15,7 +15,7 @@ export default function Lesson() {
   const [progress, setProgress] = useState([]);
   const [isResetting, setIsResetting] = useState(false);
 
-  // Загрузка данных
+  // Загрузка данных урока и прогресса
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -31,8 +31,9 @@ export default function Lesson() {
           return;
         }
 
-        setLesson(lessonSnap.data());
-        setCode(lessonSnap.data().exercises[0]?.codeTemplate || "");
+        const lessonData = lessonSnap.data();
+        setLesson(lessonData);
+        setCode(lessonData.exercises[0]?.codeTemplate || "");
 
         if (userSnap?.exists()) {
           setProgress(userSnap.data().completedExercises || []);
@@ -74,24 +75,45 @@ export default function Lesson() {
 
   // Проверка задания
   const runTests = async () => {
+    if (!lesson) return;
+  
+    const exercise = lesson.exercises[currentExercise];
+    if (!exercise?.tests) return;
+  
     try {
-      const normalizedCode = code.replace(/\s+/g, "");
-      const validSolutions = [
-        "constx=5;",
-        "letx=5;",
-        "varx=5;",
-        "constx=5",
-        "letx=5",
-        "varx=5",
-      ];
-
-      if (!validSolutions.includes(normalizedCode)) {
-        throw new Error("Используйте точный синтаксис: const x = 5;");
+      // 1. Создаем контекст выполнения
+      const context = {};
+      
+      // 2. Выполняем код пользователя и проверяем тесты
+      const checkCode = `
+        'use strict';
+        let __testResults = {};
+        try {
+          ${code};
+          ${exercise.tests.map((t, i) => 
+            `try { __testResults.test${i} = ${t.test}; } catch { __testResults.test${i} = false; }`
+          ).join('\n')}
+        } catch(e) {
+          console.error('Execution error:', e);
+        }
+        return __testResults;
+      `;
+  
+      // 3. Выполняем проверочный код
+      const results = new Function(checkCode)();
+      console.log('Результаты выполнения:', results);
+  
+      // 4. Проверяем результаты
+      for (let i = 0; i < exercise.tests.length; i++) {
+        if (results[`test${i}`] !== true) {
+          throw new Error(exercise.tests[i].description);
+        }
       }
-
-      setFeedback("✅ Верно! Задание выполнено");
+  
+      setFeedback("✅ Все тесты пройдены!");
       await saveProgress();
     } catch (error) {
+      console.error('Ошибка проверки:', error);
       setFeedback(`❌ ${error.message}`);
     }
   };
@@ -182,6 +204,20 @@ export default function Lesson() {
         </span>
       </div>
 
+      {/* Теоретическая часть */}
+      {lesson.theory && (
+        <div className="mb-8 p-6 bg-white rounded-lg shadow">
+          <h2 className="text-xl font-bold mb-4">Теория</h2>
+          <div className="prose max-w-none">
+            {lesson.theory.split("\n").map((paragraph, i) => (
+              <p key={i} className="mb-4">
+                {paragraph}
+              </p>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Блок упражнения */}
       <div className="bg-white shadow rounded-lg overflow-hidden mb-6">
         <div className="p-4 bg-gray-50 border-b">
@@ -241,7 +277,7 @@ export default function Lesson() {
         </div>
       </div>
 
-      {/* Навигация */}
+      {/* Навигация по упражнениям */}
       <div className="flex justify-between mb-6">
         <button
           onClick={() => goToExercise(currentExercise - 1)}
