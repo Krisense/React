@@ -44,10 +44,15 @@ export default function Lesson() {
       } finally {
         setIsLoading(false);
       }
+      console.log("ID урока из URL:", lessonId);
+    
     };
-
+    
     loadData();
+     
   }, [lessonId, navigate]);
+
+  
 
   // Сброс прогресса
   const resetProgress = async () => {
@@ -81,42 +86,73 @@ export default function Lesson() {
     if (!exercise?.tests) return;
   
     try {
-      // 1. Создаем контекст выполнения
-      const context = {};
-      
-      // 2. Выполняем код пользователя и проверяем тесты
-      const checkCode = `
-        'use strict';
+      // Подготовка тестов
+      const preparedTests = exercise.tests.map((t, i) => {
+        const fixedTest = t.test.replace(/\\\\/g, "\\"); // починка экранирования
+        return `
+          try {
+            __testResults.test${i} = ${fixedTest};
+          } catch (e) {
+            console.error('Ошибка в тесте ${i}:', e);
+            __testResults.test${i} = false;
+          }
+        `;
+      }).join("\n");
+  
+      // Объединение всего кода
+      const wrappedCode = `
+        "use strict";
         let __testResults = {};
         try {
-          ${code};
-          ${exercise.tests.map((t, i) => 
-            `try { __testResults.test${i} = ${t.test}; } catch { __testResults.test${i} = false; }`
-          ).join('\n')}
-        } catch(e) {
-          console.error('Execution error:', e);
+          const code = ${JSON.stringify(code)};
+          ${code}
+          ${preparedTests}
+        } catch (e) {
+          console.error('Ошибка выполнения кода пользователя:', e);
+          throw e;
         }
         return __testResults;
       `;
   
-      // 3. Выполняем проверочный код
-      const results = new Function(checkCode)();
-      console.log('Результаты выполнения:', results);
+      let results;
+      try {
+        const fn = new Function(wrappedCode);
+        results = fn();
+      } catch (userError) {
+        // Пытаемся найти номер строки ошибки
+        const message = userError.message || "Неизвестная ошибка";
+        const match = userError.stack?.match(/<anonymous>:(\d+):\d+/);
+        if (match) {
+          const errorLine = parseInt(match[1], 10) - 2; // сдвиг из-за обертки
+          setFeedback(`❌ Ошибка в коде на строке ${errorLine}: ${message}`);
+        } else {
+          setFeedback(`❌ Ошибка выполнения: ${message}`);
+        }
+        return;
+      }
   
-      // 4. Проверяем результаты
+      // Обработка результатов тестов
+      const failedTests = [];
+  
       for (let i = 0; i < exercise.tests.length; i++) {
         if (results[`test${i}`] !== true) {
-          throw new Error(exercise.tests[i].description);
+          failedTests.push(`❌ ${exercise.tests[i].description}`);
         }
       }
   
-      setFeedback("✅ Все тесты пройдены!");
-      await saveProgress();
+      if (failedTests.length > 0) {
+        setFeedback(`Тесты не пройдены:\n${failedTests.join("\n")}`);
+      } else {
+        setFeedback("✅ Все тесты успешно пройдены!");
+        await saveProgress();
+      }
     } catch (error) {
-      console.error('Ошибка проверки:', error);
-      setFeedback(`❌ ${error.message}`);
+      console.error("Ошибка в проверке:", error);
+      setFeedback(`❌ Ошибка выполнения: ${error.message}`);
     }
   };
+  
+  
 
   // Сохранение прогресса
   const saveProgress = async () => {
@@ -205,6 +241,7 @@ export default function Lesson() {
       </div>
 
       {/* Теоретическая часть */}
+          
       {lesson.theory && (
         <div className="mb-8 p-6 bg-white rounded-lg shadow">
           <h2 className="text-xl font-bold mb-4">Теория</h2>
@@ -271,7 +308,7 @@ export default function Lesson() {
                 isCompleted ? "bg-gray-400" : "bg-green-500 hover:bg-green-600"
               }`}
             >
-              Проверить код
+              Выполнить
             </button>
           </div>
         </div>
