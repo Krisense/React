@@ -3,6 +3,7 @@ import { doc, getDoc, setDoc, arrayUnion, updateDoc } from "firebase/firestore";
 import { db, auth } from "../api/firebase";
 import { useParams, useNavigate } from "react-router-dom";
 import CodeEditor from "../components/CodeEditor";
+import ApiResponseViewer from "../components/ApiResponseViewer/ApiResponseViewer";
 
 export default function Lesson() {
   const { lessonId } = useParams();
@@ -14,8 +15,10 @@ export default function Lesson() {
   const [isLoading, setIsLoading] = useState(true);
   const [progress, setProgress] = useState([]);
   const [isResetting, setIsResetting] = useState(false);
+  const [apiResponse, setApiResponse] = useState(null);
+  const [apiError, setApiError] = useState(null);
+  const [isApiLoading, setIsApiLoading] = useState(false);
 
-  // Загрузка данных урока и прогресса
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -44,17 +47,11 @@ export default function Lesson() {
       } finally {
         setIsLoading(false);
       }
-      console.log("ID урока из URL:", lessonId);
-    
     };
-    
+
     loadData();
-     
   }, [lessonId, navigate]);
 
-  
-
-  // Сброс прогресса
   const resetProgress = async () => {
     if (!auth.currentUser || !lesson) return;
 
@@ -70,6 +67,8 @@ export default function Lesson() {
       );
       setFeedback("Прогресс сброшен. Можно начать заново!");
       setCode(lesson.exercises[currentExercise]?.codeTemplate || "");
+      setApiResponse(null);
+      setApiError(null);
     } catch (error) {
       console.error("Ошибка сброса:", error);
       setFeedback("Ошибка при сбросе прогресса");
@@ -78,68 +77,66 @@ export default function Lesson() {
     }
   };
 
-  // Проверка задания
   const runTests = async () => {
     if (!lesson) return;
-  
+
     const exercise = lesson.exercises[currentExercise];
     if (!exercise?.tests) return;
-  
+
     try {
-      // Подготовка тестов
+      setIsApiLoading(true);
+      setApiResponse(null);
+      setApiError(null);
+      setFeedback("");
+
+      try {
+        const userCodeResult = await new Function(code)();
+        setApiResponse(userCodeResult);
+      } catch (execError) {
+        console.error("Ошибка выполнения:", execError);
+        setApiError(execError);
+      }
+
       const preparedTests = exercise.tests.map((t, i) => {
-        const fixedTest = t.test.replace(/\\\\/g, "\\"); // починка экранирования
+        const fixedTest = t.test.replace(/\\\\/g, "\\").trim();
+      
         return `
           try {
-            __testResults.test${i} = ${fixedTest};
+            __testResults.test${i} = await (async () => {
+              ${fixedTest}
+            })();
           } catch (e) {
-            console.error('Ошибка в тесте ${i}:', e);
             __testResults.test${i} = false;
           }
         `;
       }).join("\n");
-  
-      // Объединение всего кода
-      const wrappedCode = `
-        "use strict";
-        let __testResults = {};
-        try {
-          const code = ${JSON.stringify(code)};
-          ${code}
-          ${preparedTests}
-        } catch (e) {
-          console.error('Ошибка выполнения кода пользователя:', e);
-          throw e;
-        }
-        return __testResults;
+      
+
+      const testWrapper = `
+        return (async () => {
+          "use strict";
+          let __testResults = {};
+          try {
+            ${code}
+            ${preparedTests}
+          } catch (e) {
+            console.error('Ошибка выполнения:', e);
+            throw e;
+          }
+          return __testResults;
+        })()
       `;
-  
-      let results;
-      try {
-        const fn = new Function(wrappedCode);
-        results = fn();
-      } catch (userError) {
-        // Пытаемся найти номер строки ошибки
-        const message = userError.message || "Неизвестная ошибка";
-        const match = userError.stack?.match(/<anonymous>:(\d+):\d+/);
-        if (match) {
-          const errorLine = parseInt(match[1], 10) - 2; // сдвиг из-за обертки
-          setFeedback(`❌ Ошибка в коде на строке ${errorLine}: ${message}`);
-        } else {
-          setFeedback(`❌ Ошибка выполнения: ${message}`);
-        }
-        return;
-      }
-  
-      // Обработка результатов тестов
+
+      const testResults = await new Function(testWrapper)();
+
       const failedTests = [];
-  
+
       for (let i = 0; i < exercise.tests.length; i++) {
-        if (results[`test${i}`] !== true) {
+        if (testResults[`test${i}`] !== true) {
           failedTests.push(`❌ ${exercise.tests[i].description}`);
         }
       }
-  
+
       if (failedTests.length > 0) {
         setFeedback(`Тесты не пройдены:\n${failedTests.join("\n")}`);
       } else {
@@ -147,14 +144,13 @@ export default function Lesson() {
         await saveProgress();
       }
     } catch (error) {
-      console.error("Ошибка в проверке:", error);
+      console.error("Ошибка проверки:", error);
       setFeedback(`❌ Ошибка выполнения: ${error.message}`);
+    } finally {
+      setIsApiLoading(false);
     }
   };
-  
-  
 
-  // Сохранение прогресса
   const saveProgress = async () => {
     if (!auth.currentUser || !lesson) return;
 
@@ -179,15 +175,15 @@ export default function Lesson() {
     }
   };
 
-  // Навигация по упражнениям
   const goToExercise = (index) => {
     if (!lesson || index < 0 || index >= lesson.exercises.length) return;
     setCurrentExercise(index);
     setCode(lesson.exercises[index].codeTemplate || "");
     setFeedback("");
+    setApiResponse(null);
+    setApiError(null);
   };
 
-  // Вычисление прогресса
   const completedExercises = progress.filter(
     (item) => item.lessonId === lessonId
   ).length;
@@ -221,7 +217,6 @@ export default function Lesson() {
 
   return (
     <div className="max-w-4xl mx-auto p-4">
-      {/* Шапка урока */}
       <div className="flex justify-between items-start mb-6">
         <div>
           <h1 className="text-2xl font-bold">{lesson.title}</h1>
@@ -240,8 +235,6 @@ export default function Lesson() {
         </span>
       </div>
 
-      {/* Теоретическая часть */}
-          
       {lesson.theory && (
         <div className="mb-8 p-6 bg-white rounded-lg shadow">
           <h2 className="text-xl font-bold mb-4">Теория</h2>
@@ -255,7 +248,6 @@ export default function Lesson() {
         </div>
       )}
 
-      {/* Блок упражнения */}
       <div className="bg-white shadow rounded-lg overflow-hidden mb-6">
         <div className="p-4 bg-gray-50 border-b">
           <div className="flex justify-between items-center">
@@ -289,32 +281,38 @@ export default function Lesson() {
         />
 
         <div className="p-4 bg-gray-50 border-t">
-          <div className="flex justify-between items-center">
-            <div
-              className={`p-2 rounded ${
-                feedback.includes("✅")
-                  ? "bg-green-100 text-green-800"
-                  : feedback.includes("❌")
-                  ? "bg-red-100 text-red-800"
-                  : "bg-gray-100"
-              }`}
-            >
+          <div className="space-y-4">
+            <div className={`p-2 rounded ${
+              feedback.includes("✅")
+                ? "bg-green-100 text-green-800"
+                : feedback.includes("❌")
+                ? "bg-red-100 text-red-800"
+                : "bg-gray-100"
+            }`}>
               {feedback || "Запустите код для проверки"}
             </div>
+
+            <ApiResponseViewer 
+              response={apiResponse} 
+              error={apiError} 
+              isLoading={isApiLoading} 
+            />
+
             <button
               onClick={runTests}
-              disabled={isCompleted}
+              disabled={isCompleted || isApiLoading}
               className={`px-4 py-2 rounded text-white ${
-                isCompleted ? "bg-gray-400" : "bg-green-500 hover:bg-green-600"
+                isCompleted || isApiLoading 
+                  ? "bg-gray-400" 
+                  : "bg-green-500 hover:bg-green-600"
               }`}
             >
-              Выполнить
+              {isApiLoading ? "Выполняем..." : "Выполнить"}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Навигация по упражнениям */}
       <div className="flex justify-between mb-6">
         <button
           onClick={() => goToExercise(currentExercise - 1)}
@@ -340,7 +338,6 @@ export default function Lesson() {
         )}
       </div>
 
-      {/* Прогресс-бар */}
       <div className="mt-6">
         <div className="flex items-center justify-between mb-2">
           <span>Прогресс урока:</span>
