@@ -109,7 +109,7 @@ export default function Lesson() {
       setApiResponse(null);
       setApiError(null);
       setFeedback("");
-
+  
       // Выполнение кода пользователя
       try {
         const userCodeResult = await new Function(code)();
@@ -118,23 +118,29 @@ export default function Lesson() {
         console.error("Ошибка выполнения:", execError);
         setApiError(execError);
       }
-
-      // Подготовка тестов с подстановкой studentId
+  
+      // Подготовка тестов
       const preparedTests = exercise.tests.map((t, i) => {
-        const testWithId = t.test
+        // Добавляем доступ к исходному коду через параметр
+        const testWithCode = t.test
           .replace(/studentId=1/g, `studentId=${studentId}`)
-          .replace(/studentId: 1/g, `studentId: '${studentId}'`);
+          .replace(/studentId: 1/g, `studentId: '${studentId}'`)
+          .replace(/code/g, JSON.stringify(code)); // Добавляем код как строку
+  
         return `
           try {
-                        __testResults.test${i} = await (async () => {
-              ${testWithId}
+            __testResults.test${i} = await (async () => {
+              // Передаем код как параметр
+              const code = ${JSON.stringify(code)};
+              ${testWithCode}
             })();
           } catch (e) {
+            console.error('Ошибка в тесте:', e);
             __testResults.test${i} = false;
           }
         `;
       }).join("\n");
-
+  
       // Объединение кода и тестов
       const wrappedCode = `
         return (async () => {
@@ -150,7 +156,7 @@ export default function Lesson() {
           return __testResults;
         })()
       `;
-
+  
       // Выполнение тестов
       const testResults = await new Function(wrappedCode)();
       const failedTests = [];
