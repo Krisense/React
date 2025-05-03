@@ -18,15 +18,34 @@ export default function Lesson() {
   const [apiResponse, setApiResponse] = useState(null);
   const [apiError, setApiError] = useState(null);
   const [isApiLoading, setIsApiLoading] = useState(false);
+  
 
+  // Генерация уникального studentId
+  const generateStudentId = () => {
+    const userId = auth.currentUser?.uid || 'guest';
+    return `${userId.slice(0, 4)}`;
+  };
+
+  const [studentId, setStudentId] = useState(generateStudentId());
+  
+  // Получаем уникальный идентификатор студента
+   
+
+  // Подготовка шаблона кода с подстановкой studentId
+  const prepareCodeTemplate = (template) => {
+    if (!template) return "";
+    return template
+ 
+  };
+
+  // Загрузка данных урока
   useEffect(() => {
     const loadData = async () => {
       try {
+        setIsLoading(true);
         const [lessonSnap, userSnap] = await Promise.all([
           getDoc(doc(db, "lessons", lessonId)),
-          auth.currentUser
-            ? getDoc(doc(db, "users", auth.currentUser.uid))
-            : null,
+          auth.currentUser ? getDoc(doc(db, "users", auth.currentUser.uid)) : null,
         ]);
 
         if (!lessonSnap.exists()) {
@@ -36,7 +55,7 @@ export default function Lesson() {
 
         const lessonData = lessonSnap.data();
         setLesson(lessonData);
-        setCode(lessonData.exercises[0]?.codeTemplate || "");
+        setCode(prepareCodeTemplate(lessonData.exercises[0]?.codeTemplate || ""));
 
         if (userSnap?.exists()) {
           setProgress(userSnap.data().completedExercises || []);
@@ -52,6 +71,7 @@ export default function Lesson() {
     loadData();
   }, [lessonId, navigate]);
 
+  // Сброс прогресса
   const resetProgress = async () => {
     if (!auth.currentUser || !lesson) return;
 
@@ -66,7 +86,7 @@ export default function Lesson() {
         prev.filter((item) => !item.lessonId.includes(lessonId))
       );
       setFeedback("Прогресс сброшен. Можно начать заново!");
-      setCode(lesson.exercises[currentExercise]?.codeTemplate || "");
+      setCode(prepareCodeTemplate(lesson.exercises[currentExercise]?.codeTemplate || ""));
       setApiResponse(null);
       setApiError(null);
     } catch (error) {
@@ -77,18 +97,20 @@ export default function Lesson() {
     }
   };
 
+  // Проверка задания
   const runTests = async () => {
     if (!lesson) return;
-
+  
     const exercise = lesson.exercises[currentExercise];
     if (!exercise?.tests) return;
-
+  
     try {
       setIsApiLoading(true);
       setApiResponse(null);
       setApiError(null);
       setFeedback("");
 
+      // Выполнение кода пользователя
       try {
         const userCodeResult = await new Function(code)();
         setApiResponse(userCodeResult);
@@ -97,22 +119,24 @@ export default function Lesson() {
         setApiError(execError);
       }
 
+      // Подготовка тестов с подстановкой studentId
       const preparedTests = exercise.tests.map((t, i) => {
-        const fixedTest = t.test.replace(/\\\\/g, "\\").trim();
-      
+        const testWithId = t.test
+          .replace(/studentId=1/g, `studentId=${studentId}`)
+          .replace(/studentId: 1/g, `studentId: '${studentId}'`);
         return `
           try {
-            __testResults.test${i} = await (async () => {
-              ${fixedTest}
+                        __testResults.test${i} = await (async () => {
+              ${testWithId}
             })();
           } catch (e) {
             __testResults.test${i} = false;
           }
         `;
       }).join("\n");
-      
 
-      const testWrapper = `
+      // Объединение кода и тестов
+      const wrappedCode = `
         return (async () => {
           "use strict";
           let __testResults = {};
@@ -127,16 +151,16 @@ export default function Lesson() {
         })()
       `;
 
-      const testResults = await new Function(testWrapper)();
-
+      // Выполнение тестов
+      const testResults = await new Function(wrappedCode)();
       const failedTests = [];
-
+  
       for (let i = 0; i < exercise.tests.length; i++) {
         if (testResults[`test${i}`] !== true) {
           failedTests.push(`❌ ${exercise.tests[i].description}`);
         }
       }
-
+  
       if (failedTests.length > 0) {
         setFeedback(`Тесты не пройдены:\n${failedTests.join("\n")}`);
       } else {
@@ -151,6 +175,35 @@ export default function Lesson() {
     }
   };
 
+  // Очистка данных пользователя в MockAPI
+  const clearUserData = async () => {
+    try {
+      setIsApiLoading(true);
+      const response = await fetch(
+        `https://681396a2129f6313e211c3b8.mockapi.io/users?studentId=${studentId}`
+      );
+      const userData = await response.json();
+      
+      await Promise.all(
+        userData.map(user => 
+          fetch(`https://681396a2129f6313e211c3b8.mockapi.io/users/${user.id}`, {
+            method: 'DELETE'
+          })
+        )
+      );
+      
+      setFeedback("✅ Ваши данные очищены");
+      setApiResponse(null);
+      setApiError(null);
+    } catch (error) {
+      console.error("Ошибка очистки:", error);
+      setFeedback(`❌ Ошибка очистки: ${error.message}`);
+    } finally {
+      setIsApiLoading(false);
+    }
+  };
+
+  // Сохранение прогресса
   const saveProgress = async () => {
     if (!auth.currentUser || !lesson) return;
 
@@ -175,15 +228,17 @@ export default function Lesson() {
     }
   };
 
+  // Навигация по упражнениям
   const goToExercise = (index) => {
     if (!lesson || index < 0 || index >= lesson.exercises.length) return;
     setCurrentExercise(index);
-    setCode(lesson.exercises[index].codeTemplate || "");
+    setCode(prepareCodeTemplate(lesson.exercises[index]?.codeTemplate || ""));
     setFeedback("");
     setApiResponse(null);
     setApiError(null);
   };
 
+  // Вычисление прогресса
   const completedExercises = progress.filter(
     (item) => item.lessonId === lessonId
   ).length;
@@ -217,6 +272,15 @@ export default function Lesson() {
 
   return (
     <div className="max-w-4xl mx-auto p-4">
+      {/* Шапка урока */}
+      <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+        <p className="text-sm text-blue-700">
+          Ваш уникальный Student Id: <span className="font-mono font-bold">{studentId}</span>
+        </p>
+        <p className="text-xs text-blue-600 mt-1">
+          Этот ID используется для ваших данных в API
+        </p>
+      </div>
       <div className="flex justify-between items-start mb-6">
         <div>
           <h1 className="text-2xl font-bold">{lesson.title}</h1>
@@ -235,6 +299,7 @@ export default function Lesson() {
         </span>
       </div>
 
+      {/* Теоретическая часть */}      
       {lesson.theory && (
         <div className="mb-8 p-6 bg-white rounded-lg shadow">
           <h2 className="text-xl font-bold mb-4">Теория</h2>
@@ -248,6 +313,7 @@ export default function Lesson() {
         </div>
       )}
 
+      {/* Блок упражнения */}
       <div className="bg-white shadow rounded-lg overflow-hidden mb-6">
         <div className="p-4 bg-gray-50 border-b">
           <div className="flex justify-between items-center">
@@ -257,13 +323,22 @@ export default function Lesson() {
                 <span className="ml-2 text-green-500">✓ Выполнено</span>
               )}
             </h2>
-            <button
-              onClick={resetProgress}
-              disabled={isResetting || completedExercises === 0}
-              className="text-sm text-red-500 hover:text-red-700 disabled:opacity-50"
-            >
-              {isResetting ? "Сбрасываем..." : "Сбросить прогресс"}
-            </button>
+            <div className="flex space-x-2">
+              <button
+                onClick={clearUserData}
+                disabled={isApiLoading}
+                className="text-sm text-blue-500 hover:text-blue-700 disabled:opacity-50"
+              >
+                Очистить мои данные
+              </button>
+              <button
+                onClick={resetProgress}
+                disabled={isResetting || completedExercises === 0}
+                className="text-sm text-red-500 hover:text-red-700 disabled:opacity-50"
+              >
+                {isResetting ? "Сбрасываем..." : "Сбросить прогресс"}
+              </button>
+            </div>
           </div>
           <p className="mt-2 text-gray-700">
             {lesson.exercises[currentExercise]?.instruction}
@@ -283,10 +358,10 @@ export default function Lesson() {
         <div className="p-4 bg-gray-50 border-t">
           <div className="space-y-4">
             <div className={`p-2 rounded ${
-              feedback.includes("✅")
-                ? "bg-green-100 text-green-800"
-                : feedback.includes("❌")
-                ? "bg-red-100 text-red-800"
+              feedback.includes("✅") 
+                ? "bg-green-100 text-green-800" 
+                : feedback.includes("❌") 
+                ? "bg-red-100 text-red-800" 
                 : "bg-gray-100"
             }`}>
               {feedback || "Запустите код для проверки"}
@@ -313,6 +388,7 @@ export default function Lesson() {
         </div>
       </div>
 
+      {/* Навигация по упражнениям */}
       <div className="flex justify-between mb-6">
         <button
           onClick={() => goToExercise(currentExercise - 1)}
@@ -338,6 +414,7 @@ export default function Lesson() {
         )}
       </div>
 
+      {/* Прогресс-бар */}
       <div className="mt-6">
         <div className="flex items-center justify-between mb-2">
           <span>Прогресс урока:</span>
