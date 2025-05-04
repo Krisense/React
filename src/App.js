@@ -36,7 +36,7 @@ function App() {
         {/* Защищенные маршруты */}
         <Route 
           path="/dashboard" 
-          element={user ? <Dashboard /> : <Navigate to="/login" />} 
+          element={user ? <Dashboard /> : <Navigate to="/" />} 
         />
 
         {/* Другие маршруты */}

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { doc, getDoc, collection, getDocs } from 'firebase/firestore';
 import { db, auth } from '../api/firebase';
 import { useNavigate } from 'react-router-dom';
+import Navbar from '../components/Navbar';
 
 export default function Dashboard() {
   const [userProgress, setUserProgress] = useState([]);
@@ -12,9 +13,9 @@ export default function Dashboard() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const fetchData = async () => {
+    const fetchProgress = async () => {
       if (!auth.currentUser) {
-        setLoading(false);
+        navigate('/');
         return;
       }
 
@@ -30,9 +31,6 @@ export default function Dashboard() {
         }
 
         const userData = userDoc.data();
-        console.log('Данные пользователя:', userData); // Для отладки
-
-        // Преобразуем completedExercises в массив
         const exercises = userData.completedExercises || [];
         const exercisesArray = Array.isArray(exercises) 
           ? exercises 
@@ -42,7 +40,6 @@ export default function Dashboard() {
 
         // 2. Получаем все уроки
         const lessonsSnapshot = await getDocs(collection(db, 'lessons'));
-        console.log('Уроки:', lessonsSnapshot.docs.map(d => d.id)); // Для отладки
         setTotalLessons(lessonsSnapshot.size);
 
       } catch (err) {
@@ -53,8 +50,8 @@ export default function Dashboard() {
       }
     };
 
-    fetchData();
-  }, []);
+    fetchProgress();
+  }, [navigate]);
 
   // Подсчет уникальных завершенных уроков
   useEffect(() => {
@@ -67,7 +64,7 @@ export default function Dashboard() {
   const handleLogout = async () => {
     try {
       await auth.signOut();
-      navigate('/login');
+      navigate('/'); // Перенаправляем на главную страницу
     } catch (err) {
       console.error('Ошибка выхода:', err);
     }
@@ -99,9 +96,10 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
-      <div className="max-w-4xl mx-auto">
-        <header className="flex justify-between items-center mb-8">
+    <div className="min-h-screen bg-gray-100">
+      <Navbar />
+      <div className="max-w-4xl mx-auto p-6 pt-4">
+      <header className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-gray-800">Личный кабинет</h1>
           <button 
             onClick={handleLogout}
@@ -110,7 +108,6 @@ export default function Dashboard() {
             Выйти
           </button>
         </header>
-
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           {/* Карточка прогресса */}
           <div className="bg-white p-6 rounded-lg shadow">
