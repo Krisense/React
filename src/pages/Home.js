@@ -134,18 +134,18 @@ export default function Home() {
                 )}
               </button>
 
-              <div className="mt-6 text-sm text-gray-500">
+              {/* <div className="mt-6 text-sm text-gray-500">
                 Нажимая кнопку, вы соглашаетесь с нашими Условиями использования и Политикой конфиденциальности
-              </div>
+              </div> */}
             </>
           ) : (
             <div className="space-y-4">
-              <button
+              {/* <button
                 onClick={() => navigate('/lessons')}
                 className="w-full px-6 py-3 bg-green-500 hover:bg-green-600 text-white rounded-lg font-medium transition"
               >
                 Перейти к урокам
-              </button>
+              </button> */}
               <button
                 onClick={() => navigate('/dashboard')}
                 className="w-full px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition"

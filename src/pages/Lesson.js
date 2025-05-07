@@ -333,13 +333,13 @@ export default function Lesson() {
               )}
             </h2>
             <div className="flex space-x-2">
-              <button
+              {/* <button
                 onClick={clearUserData}
                 disabled={isApiLoading}
                 className="text-sm text-blue-500 hover:text-blue-700 disabled:opacity-50"
               >
                 Очистить мои данные
-              </button>
+              </button> */}
               <button
                 onClick={resetProgress}
                 disabled={isResetting || completedExercises === 0}

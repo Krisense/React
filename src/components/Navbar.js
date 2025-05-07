@@ -80,14 +80,7 @@ export default function Navbar() {
           </div>
         )}
 
-        {!auth.currentUser && (
-          <Link
-            to="/"
-            className="text-sm font-medium text-blue-600 hover:text-blue-800 transition"
-          >
-            Войти
-          </Link>
-        )}
+         
       </div>
     </nav>
   );
