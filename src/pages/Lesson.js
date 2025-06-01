@@ -5,41 +5,35 @@ import { useParams, useNavigate } from "react-router-dom";
 import CodeEditor from "../components/CodeEditor";
 import ApiResponseViewer from "../components/ApiResponseViewer/ApiResponseViewer";
 import Navbar from "../components/Navbar";
+import { useProgress } from "../context/ProgressContext";
 
 export default function Lesson() {
   const { lessonId } = useParams();
   const navigate = useNavigate();
+  const { completedLessons, setCompletedLessons } = useProgress();
   const [lesson, setLesson] = useState(null);
   const [currentExercise, setCurrentExercise] = useState(0);
   const [code, setCode] = useState("");
   const [feedback, setFeedback] = useState("");
   const [isLoading, setIsLoading] = useState(true);
-  const [progress, setProgress] = useState([]);
+  const [progress, setLocalProgress] = useState([]);
   const [isResetting, setIsResetting] = useState(false);
   const [apiResponse, setApiResponse] = useState(null);
   const [apiError, setApiError] = useState(null);
   const [isApiLoading, setIsApiLoading] = useState(false);
   
-
-  // Генерация уникального studentId
   const generateStudentId = () => {
     const userId = auth.currentUser?.uid || 'guest';
     return `${userId.slice(0, 4)}`;
   };
 
   const [studentId, setStudentId] = useState(generateStudentId());
-  
-  // Получаем уникальный идентификатор студента
-   
 
-  // Подготовка шаблона кода с подстановкой studentId
   const prepareCodeTemplate = (template) => {
     if (!template) return "";
-    return template
- 
+    return template;
   };
 
-  // Загрузка данных урока
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -59,7 +53,7 @@ export default function Lesson() {
         setCode(prepareCodeTemplate(lessonData.exercises[0]?.codeTemplate || ""));
 
         if (userSnap?.exists()) {
-          setProgress(userSnap.data().completedExercises || []);
+          setLocalProgress(userSnap.data().completedExercises || []);
         }
       } catch (error) {
         console.error("Ошибка загрузки:", error);
@@ -72,7 +66,6 @@ export default function Lesson() {
     loadData();
   }, [lessonId, navigate]);
 
-  // Сброс прогресса
   const resetProgress = async () => {
     if (!auth.currentUser || !lesson) return;
 
@@ -83,9 +76,15 @@ export default function Lesson() {
           (item) => !item.lessonId.includes(lessonId)
         ),
       });
-      setProgress((prev) =>
+      setLocalProgress((prev) =>
         prev.filter((item) => !item.lessonId.includes(lessonId))
       );
+      
+      // Удаляем урок из завершенных
+      const newCompletedLessons = new Set(completedLessons);
+      newCompletedLessons.delete(lessonId);
+      setCompletedLessons(newCompletedLessons);
+      
       setFeedback("Прогресс сброшен. Можно начать заново!");
       setCode(prepareCodeTemplate(lesson.exercises[currentExercise]?.codeTemplate || ""));
       setApiResponse(null);
@@ -98,7 +97,6 @@ export default function Lesson() {
     }
   };
 
-  // Проверка задания
   const runTests = async () => {
     if (!lesson) return;
   
@@ -111,7 +109,6 @@ export default function Lesson() {
       setApiError(null);
       setFeedback("");
   
-      // Выполнение кода пользователя
       try {
         const userCodeResult = await new Function(code)();
         setApiResponse(userCodeResult);
@@ -120,18 +117,15 @@ export default function Lesson() {
         setApiError(execError);
       }
   
-      // Подготовка тестов
       const preparedTests = exercise.tests.map((t, i) => {
-        // Добавляем доступ к исходному коду через параметр
         const testWithCode = t.test
           .replace(/studentId=1/g, `studentId=${studentId}`)
           .replace(/studentId: 1/g, `studentId: '${studentId}'`)
-          .replace(/code/g, JSON.stringify(code)); // Добавляем код как строку
+          .replace(/code/g, JSON.stringify(code));
   
         return `
           try {
             __testResults.test${i} = await (async () => {
-              // Передаем код как параметр
               const code = ${JSON.stringify(code)};
               ${testWithCode}
             })();
@@ -142,7 +136,6 @@ export default function Lesson() {
         `;
       }).join("\n");
   
-      // Объединение кода и тестов
       const wrappedCode = `
         return (async () => {
           "use strict";
@@ -158,7 +151,6 @@ export default function Lesson() {
         })()
       `;
   
-      // Выполнение тестов
       const testResults = await new Function(wrappedCode)();
       const failedTests = [];
   
@@ -182,35 +174,6 @@ export default function Lesson() {
     }
   };
 
-  // Очистка данных пользователя в MockAPI
-  const clearUserData = async () => {
-    try {
-      setIsApiLoading(true);
-      const response = await fetch(
-        `https://681396a2129f6313e211c3b8.mockapi.io/users?studentId=${studentId}`
-      );
-      const userData = await response.json();
-      
-      await Promise.all(
-        userData.map(user => 
-          fetch(`https://681396a2129f6313e211c3b8.mockapi.io/users/${user.id}`, {
-            method: 'DELETE'
-          })
-        )
-      );
-      
-      setFeedback("✅ Ваши данные очищены");
-      setApiResponse(null);
-      setApiError(null);
-    } catch (error) {
-      console.error("Ошибка очистки:", error);
-      setFeedback(`❌ Ошибка очистки: ${error.message}`);
-    } finally {
-      setIsApiLoading(false);
-    }
-  };
-
-  // Сохранение прогресса
   const saveProgress = async () => {
     if (!auth.currentUser || !lesson) return;
 
@@ -229,13 +192,22 @@ export default function Lesson() {
         },
         { merge: true }
       );
-      setProgress((prev) => [...prev, { exerciseId, lessonId }]);
+      
+      const updatedProgress = [...progress, { exerciseId, lessonId }];
+      setLocalProgress(updatedProgress);
+      
+      // Проверяем, выполнены ли все задания урока
+      const exercisesInLesson = updatedProgress.filter(item => item.lessonId === lessonId);
+      if (exercisesInLesson.length === lesson.exercises.length) {
+        const newCompletedLessons = new Set(completedLessons);
+        newCompletedLessons.add(lessonId);
+        setCompletedLessons(newCompletedLessons);
+      }
     } catch (error) {
       console.error("Ошибка сохранения:", error);
     }
   };
 
-  // Навигация по упражнениям
   const goToExercise = (index) => {
     if (!lesson || index < 0 || index >= lesson.exercises.length) return;
     setCurrentExercise(index);
@@ -245,7 +217,6 @@ export default function Lesson() {
     setApiError(null);
   };
 
-  // Вычисление прогресса
   const completedExercises = progress.filter(
     (item) => item.lessonId === lessonId
   ).length;
