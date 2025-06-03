@@ -1,59 +1,12 @@
 import { Link } from 'react-router-dom';
 import { auth } from '../api/firebase';
 import { useEffect } from 'react';
-import { doc, getDoc, collection, getDocs } from 'firebase/firestore';
+import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../api/firebase';
 import { useProgress } from '../context/ProgressContext';
 
 export default function Navbar() {
-  const { completedLessons, totalLessons, setCompletedLessons, setTotalLessons } = useProgress();
-
-  useEffect(() => {
-    const fetchProgress = async () => {
-      if (!auth.currentUser) return;
-      
-      try {
-        // Получаем данные пользователя
-        const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          const exercises = userData.completedExercises || [];
-          const exercisesArray = Array.isArray(exercises) ? exercises : Object.values(exercises);
-          
-          // Получаем уникальные завершенные уроки (где выполнены ВСЕ задания)
-          const lessonsWithAllExercises = await getCompletedLessons(exercisesArray);
-          setCompletedLessons(new Set(lessonsWithAllExercises));
-        }
-
-        // Получаем общее количество уроков
-        const lessonsSnapshot = await getDocs(collection(db, 'lessons'));
-        setTotalLessons(lessonsSnapshot.size);
-      } catch (error) {
-        console.error("Ошибка загрузки прогресса:", error);
-      }
-    };
-
-    const getCompletedLessons = async (completedExercises) => {
-      const lessonsSnapshot = await getDocs(collection(db, 'lessons'));
-      const completedLessons = [];
-      
-      lessonsSnapshot.forEach(lessonDoc => {
-        const lessonId = lessonDoc.id;
-        const lessonExercises = lessonDoc.data().exercises || [];
-        const completedExercisesForLesson = completedExercises.filter(
-          ex => ex.lessonId === lessonId
-        );
-        
-        if (completedExercisesForLesson.length === lessonExercises.length) {
-          completedLessons.push(lessonId);
-        }
-      });
-      
-      return completedLessons;
-    };
-
-    fetchProgress();
-  }, [setCompletedLessons, setTotalLessons]);
+  const { level, xp, nextLevelXp, completedLessons, totalLessons } = useProgress();
 
   return (
     <nav className="bg-white shadow-sm py-3 px-6 flex items-center justify-between sticky top-0 z-50">
@@ -69,17 +22,18 @@ export default function Navbar() {
 
       <div className="flex items-center space-x-4">
         {auth.currentUser && (
-          <div className="flex items-center">
-            <div className="relative w-32 mr-4">
-              <div className="w-full bg-gray-200 rounded-full h-2.5">
-                <div 
-                  className="bg-blue-600 h-2.5 rounded-full" 
-                  style={{ width: `${totalLessons > 0 ? (completedLessons.size / totalLessons) * 100 : 0}%` }}
-                ></div>
+          <div className="flex items-center space-x-4">
+            <div className="progress-container">
+              <div className="flex justify-between text-xs text-gray-500 mb-1">
+                <span>Ур. {level}</span>
+                <span>{completedLessons.size}/{totalLessons}</span>
               </div>
-              <span className="text-xs text-gray-500 absolute -bottom-5 left-0">
-                {completedLessons.size}/{totalLessons} уроков
-              </span>
+              <div className="progress-bar">
+                <div 
+                  className="progress-fill" 
+                  style={{ width: `${totalLessons > 0 ? (completedLessons.size / totalLessons) * 100 : 0}%` }}
+                />
+              </div>
             </div>
 
             <Link

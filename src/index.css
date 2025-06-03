@@ -15,3 +15,172 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
     monospace;
 }
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-10px); }
+  40%, 80% { transform: translateX(10px); }
+}
+
+@keyframes float-up {
+  0% { transform: translateY(0); opacity: 1; }
+  100% { transform: translateY(-100px); opacity: 0; }
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+  100% { transform: scale(1); }
+}
+
+@keyframes fade-in {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+.error-animation {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(255, 200, 200, 0.3);
+  animation: shake 0.5s ease-in-out;
+  z-index: 100;
+  pointer-events: none;
+}
+
+.success-animation {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  pointer-events: none;
+}
+
+.success-animation::after {
+  content: "✓";
+  font-size: 80px;
+  color: #10B981;
+  animation: pulse 0.5s ease-in-out 3;
+}
+
+.level-up-popup {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 200;
+  animation: fade-in 0.3s ease-out;
+}
+
+.level-up-content {
+  font-size: 48px;
+  font-weight: bold;
+  color: white;
+  text-align: center;
+  animation: pulse 1s infinite alternate;
+}
+
+.xp-gain-animation {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 24px;
+  font-weight: bold;
+  color: #3B82F6;
+  z-index: 150;
+  animation: float-up 1.5s ease-out forwards;
+}
+
+/* Прогресс бар в Navbar */
+.progress-container {
+  width: 120px;
+}
+
+.progress-bar {
+  height: 6px;
+  background-color: #E5E7EB;
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background-color: #3B82F6;
+  transition: width 0.3s ease;
+}
+
+
+/* Базовые стили */
+body {
+  --editor-bg: #ffffff;
+  --editor-text: #000000;
+  --bg-primary: #f3f4f6;
+  --text-primary: #111827;
+  --border-color: #e5e7eb;
+}
+
+/* Темная тема */
+body.theme-dark {
+  --editor-bg: #1e1e1e;
+  --editor-text: #d4d4d4;
+  --bg-primary: #2d2d2d;
+  --text-primary: #ffffff;
+  --border-color: #4b5563;
+}
+
+/* Ретро тема */
+body.theme-retro {
+  --editor-bg: #f0e6d2;
+  --editor-text: #5c4d3c;
+  --bg-primary: #e5d9c0;
+  --text-primary: #3a3229;
+  --border-color: #d1c7b7;
+}
+
+/* Высококонтрастная тема */
+body.theme-high-contrast {
+  --editor-bg: #000000;
+  --editor-text: #ffff00;
+  --bg-primary: #000000;
+  --text-primary: #ffffff;
+  --border-color: #ffff00;
+}
+
+/* Применение переменных */
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.bg-white {
+  background-color: var(--bg-primary);
+}
+
+.text-gray-800 {
+  color: var(--text-primary);
+}
+
+.border {
+  border-color: var(--border-color);
+}
+
+/* Для редактора кода */
+.monaco-editor, .monaco-editor-background {
+  background-color: var(--editor-bg) !important;
+}
+
+.monaco-editor .view-lines {
+  color: var(--editor-text) !important;
+}

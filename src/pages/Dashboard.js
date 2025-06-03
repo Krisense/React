@@ -3,15 +3,17 @@ import { doc, getDoc, collection, getDocs } from 'firebase/firestore';
 import { db, auth } from '../api/firebase';
 import { useNavigate } from 'react-router-dom';
 import Navbar from '../components/Navbar';
+import { useProgress } from '../context/ProgressContext';
 
 export default function Dashboard() {
   const [userProgress, setUserProgress] = useState([]);
   const [completedCount, setCompletedCount] = useState(0);
   const [totalLessons, setTotalLessons] = useState(0);
-  const [lessons, setLessons] = useState([]); // Добавлено состояние для уроков
+  const [lessons, setLessons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
+  const { level, xp, nextLevelXp } = useProgress();
 
   useEffect(() => {
     const fetchProgress = async () => {
@@ -24,7 +26,6 @@ export default function Dashboard() {
         setLoading(true);
         setError(null);
 
-        // 1. Получаем данные пользователя
         const userDoc = await getDoc(doc(db, 'users', auth.currentUser.uid));
         
         if (!userDoc.exists()) {
@@ -33,13 +34,10 @@ export default function Dashboard() {
 
         const userData = userDoc.data();
         const exercises = userData.completedExercises || [];
-        const exercisesArray = Array.isArray(exercises) 
-          ? exercises 
-          : Object.values(exercises);
+        const exercisesArray = Array.isArray(exercises) ? exercises : Object.values(exercises);
         
         setUserProgress(exercisesArray);
 
-        // 2. Получаем все уроки
         const lessonsSnapshot = await getDocs(collection(db, 'lessons'));
         const lessonsData = lessonsSnapshot.docs.map(doc => ({
           id: doc.id,
@@ -59,7 +57,6 @@ export default function Dashboard() {
     fetchProgress();
   }, [navigate]);
 
-  // Подсчет полностью завершенных уроков
   useEffect(() => {
     if (userProgress.length === 0 || lessons.length === 0) {
       setCompletedCount(0);
@@ -76,7 +73,6 @@ export default function Dashboard() {
     setCompletedCount(fullyCompletedLessons);
   }, [userProgress, lessons]);
 
-  // Остальной код остается без изменений
   const handleLogout = async () => {
     try {
       await auth.signOut();
@@ -115,20 +111,43 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gray-100">
       <Navbar />
       <div className="max-w-4xl mx-auto p-6 pt-4">
+     {/* Панель прогресса */}
+        <div className="bg-white p-4 rounded-lg shadow mb-6">
+          <div className="flex justify-between mb-2">
+            <span className="font-bold">Уровень {level}</span>
+            <span>{xp}/{nextLevelXp} XP</span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-4">
+            <div 
+              className="bg-gradient-to-r from-blue-500 to-purple-500 h-4 rounded-full" 
+              style={{ width: `${Math.min(100, (xp / nextLevelXp) * 100)}%` }}
+            />
+          </div>
+        </div>
+
+
         <header className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-gray-800">Личный кабинет</h1>
-          <button
-            onClick={() => navigate('/lessons')}
-            className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition"
-          >
-            Перейти к урокам
-          </button>
-          <button 
-            onClick={handleLogout}
-            className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition"
-          >
-            Выйти
-          </button>
+          <div className="flex space-x-4">
+            <button
+              onClick={() => navigate('/lessons')}
+              className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition"
+            >
+              Перейти к урокам
+            </button>
+            <button 
+              onClick={() => navigate('/shop')}
+              className="px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600 transition"
+            >
+              Магазин
+            </button>
+            <button 
+              onClick={handleLogout}
+              className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition"
+            >
+              Выйти
+            </button>
+          </div>
         </header>
         
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
@@ -170,6 +189,12 @@ export default function Dashboard() {
                   <span>10 заданий выполнено</span>
                 </div>
               )}
+              {level >= 3 && (
+                <div className="flex items-center">
+                  <span className="text-green-500 mr-2">✓</span>
+                  <span>Достигнут уровень 3</span>
+                </div>
+              )}
             </div>
           </div>
 
@@ -178,6 +203,7 @@ export default function Dashboard() {
             <h3 className="text-lg font-semibold mb-2">Статистика</h3>
             <p>Уроков завершено: {completedCount}</p>
             <p>Заданий выполнено: {userProgress.length}</p>
+            <p>Текущий уровень: {level}</p>
           </div>
         </div>
 
