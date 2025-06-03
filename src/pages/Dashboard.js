@@ -8,6 +8,7 @@ export default function Dashboard() {
   const [userProgress, setUserProgress] = useState([]);
   const [completedCount, setCompletedCount] = useState(0);
   const [totalLessons, setTotalLessons] = useState(0);
+  const [lessons, setLessons] = useState([]); // Добавлено состояние для уроков
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const navigate = useNavigate();
@@ -40,7 +41,12 @@ export default function Dashboard() {
 
         // 2. Получаем все уроки
         const lessonsSnapshot = await getDocs(collection(db, 'lessons'));
-        setTotalLessons(lessonsSnapshot.size);
+        const lessonsData = lessonsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setLessons(lessonsData);
+        setTotalLessons(lessonsData.length);
 
       } catch (err) {
         console.error('Ошибка загрузки:', err);
@@ -53,18 +59,28 @@ export default function Dashboard() {
     fetchProgress();
   }, [navigate]);
 
-  // Подсчет уникальных завершенных уроков
+  // Подсчет полностью завершенных уроков
   useEffect(() => {
-    const uniqueLessons = new Set(
-      userProgress.map(item => item.lessonId)
-    ).size;
-    setCompletedCount(uniqueLessons);
-  }, [userProgress]);
+    if (userProgress.length === 0 || lessons.length === 0) {
+      setCompletedCount(0);
+      return;
+    }
 
+    const fullyCompletedLessons = lessons.filter(lesson => {
+      const completedExercises = userProgress.filter(
+        item => item.lessonId === lesson.id
+      ).length;
+      return completedExercises === (lesson.exercises?.length || 0);
+    }).length;
+
+    setCompletedCount(fullyCompletedLessons);
+  }, [userProgress, lessons]);
+
+  // Остальной код остается без изменений
   const handleLogout = async () => {
     try {
       await auth.signOut();
-      navigate('/'); // Перенаправляем на главную страницу
+      navigate('/');
     } catch (err) {
       console.error('Ошибка выхода:', err);
     }
@@ -99,22 +115,22 @@ export default function Dashboard() {
     <div className="min-h-screen bg-gray-100">
       <Navbar />
       <div className="max-w-4xl mx-auto p-6 pt-4">
-      <header className="flex justify-between items-center mb-8">
+        <header className="flex justify-between items-center mb-8">
           <h1 className="text-3xl font-bold text-gray-800">Личный кабинет</h1>
           <button
-                onClick={() => navigate('/lessons')}
-                className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition"
-              >
-                Перейти к урокам
-              </button>
+            onClick={() => navigate('/lessons')}
+            className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600 transition"
+          >
+            Перейти к урокам
+          </button>
           <button 
             onClick={handleLogout}
             className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition"
           >
             Выйти
           </button>
-          
         </header>
+        
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           {/* Карточка прогресса */}
           <div className="bg-white p-6 rounded-lg shadow">
@@ -170,6 +186,7 @@ export default function Dashboard() {
           <h2 className="text-2xl font-semibold mb-4">Мои уроки</h2>
           <LessonProgressList 
             userProgress={userProgress} 
+            lessons={lessons}
             onLessonSelect={(lessonId) => navigate(`/lessons/${lessonId}`)}
           />
         </section>
@@ -178,40 +195,10 @@ export default function Dashboard() {
   );
 }
 
-function LessonProgressList({ userProgress, onLessonSelect }) {
-  const [lessons, setLessons] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchLessons = async () => {
-      try {
-        const querySnapshot = await getDocs(collection(db, 'lessons'));
-        const lessonsData = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
-        setLessons(lessonsData);
-      } catch (err) {
-        console.error('Ошибка загрузки уроков:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchLessons();
-  }, []);
-
+function LessonProgressList({ userProgress, lessons, onLessonSelect }) {
   const getLessonProgress = (lessonId) => {
     return userProgress.filter(item => item.lessonId === lessonId).length;
   };
-
-  if (loading) {
-    return (
-      <div className="flex justify-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-4">
