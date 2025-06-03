@@ -15,93 +15,13 @@ code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
     monospace;
 }
-@keyframes shake {
-  0%, 100% { transform: translateX(0); }
-  20%, 60% { transform: translateX(-10px); }
-  40%, 80% { transform: translateX(10px); }
-}
+ 
 
-@keyframes float-up {
-  0% { transform: translateY(0); opacity: 1; }
-  100% { transform: translateY(-100px); opacity: 0; }
-}
+ 
 
-@keyframes pulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.1); }
-  100% { transform: scale(1); }
-}
+ 
 
-@keyframes fade-in {
-  0% { opacity: 0; }
-  100% { opacity: 1; }
-}
-
-.error-animation {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(255, 200, 200, 0.3);
-  animation: shake 0.5s ease-in-out;
-  z-index: 100;
-  pointer-events: none;
-}
-
-.success-animation {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 100;
-  pointer-events: none;
-}
-
-.success-animation::after {
-  content: "✓";
-  font-size: 80px;
-  color: #10B981;
-  animation: pulse 0.5s ease-in-out 3;
-}
-
-.level-up-popup {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.8);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 200;
-  animation: fade-in 0.3s ease-out;
-}
-
-.level-up-content {
-  font-size: 48px;
-  font-weight: bold;
-  color: white;
-  text-align: center;
-  animation: pulse 1s infinite alternate;
-}
-
-.xp-gain-animation {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 24px;
-  font-weight: bold;
-  color: #3B82F6;
-  z-index: 150;
-  animation: float-up 1.5s ease-out forwards;
-}
+ 
 
 /* Прогресс бар в Navbar */
 .progress-container {

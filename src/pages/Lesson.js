@@ -6,6 +6,8 @@ import CodeEditor from "../components/CodeEditor";
 import ApiResponseViewer from "../components/ApiResponseViewer/ApiResponseViewer";
 import Navbar from "../components/Navbar";
 import { useProgress } from "../context/ProgressContext";
+import { AnimatePresence } from 'framer-motion';
+import { SuccessAnimation, ErrorAnimation, XpGainAnimation, LevelUpAnimation } from '../components/Animations';
 
 export default function Lesson() {
   const { lessonId } = useParams();
@@ -211,16 +213,14 @@ export default function Lesson() {
       }
 
       if (failedTests.length > 0) {
-        setFeedback(`Тесты не пройдены:\n${failedTests.join("\n")}`);
-        setShowError(true);
-        setTimeout(() => setShowError(false), 1000);
-      } else {
-        setFeedback("✅ Все тесты успешно пройдены!");
-        setShowSuccess(true);
-        setTimeout(() => setShowSuccess(false), 2000);
-        addXp(lesson.difficulty);
-        await saveProgress();
-      }
+  setFeedback(`Тесты не пройдены:\n${failedTests.join("\n")}`);
+  setShowError(true);
+} else {
+  setFeedback("✅ Все тесты успешно пройдены!");
+  setShowSuccess(true);
+  await addXp(lesson.difficulty); // Переместили вызов addXp сюда
+  await saveProgress();
+}
     } catch (error) {
       console.error("Ошибка проверки:", error);
       setFeedback(`❌ Ошибка выполнения: ${error.message}`);
@@ -316,24 +316,14 @@ export default function Lesson() {
   return (
     <div className="min-h-screen bg-gray-100">
       <Navbar />
+          <AnimatePresence>  
+      {showSuccess && <SuccessAnimation />}
+      {showError && <ErrorAnimation />}
+      {showXpGain && <XpGainAnimation amount={gainedXp} />}
+      {showLevelUp && <LevelUpAnimation newLevel={level} />}
+    </AnimatePresence>
       <div className="max-w-4xl mx-auto p-4">
-        {/* Анимация успеха */}
-        {showSuccess && <div className="success-animation"></div>}
-
-        {/* Анимация ошибки */}
-        {showError && <div className="error-animation"></div>}
-
-        {/* Анимация повышения уровня */}
-        {showLevelUp && (
-          <div className="level-up-popup">
-            <div className="level-up-content">
-              LEVEL UP! {level - 1} → {level}
-            </div>
-          </div>
-        )}
-
-        {/* Анимация получения XP */}
-        {showXpGain && <div className="xp-gain-animation">+{gainedXp} XP</div>}
+ 
 
         {/* Индикатор прогресса */}
         <div className="fixed bottom-4 right-4 bg-white p-3 rounded-lg shadow-lg z-50">
