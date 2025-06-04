@@ -5,10 +5,10 @@
 :root, .theme-default {
   --editor-bg: #ffffff;
   --editor-text: #000000;
-  --bg-primary: #f3f4f6;
+  --bg-primary: #ffffff;
   --text-primary: #111827;
   --border-color: #e5e7eb;
-  --bg-primaryback: white;  
+  --bg-primaryback: rgb(252, 248, 248);  
 }
 
 .theme-dark {
