@@ -7,14 +7,14 @@ const SHOP_ITEMS = [
   {
     id: 1,
     name: "Темный редактор",
-    description: "Темная тема для редактора кода",
+    description: "Темная тема",
     price: 200,
     unlockLevel: 3,
     theme: "dark",
   },
   {
     id: 2,
-    name: "Ретро стиль",
+    name: "Бежевый стиль",
     description: "Винтажный вид интерфейса",
     price: 1500,
     unlockLevel: 8,
