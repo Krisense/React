@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Confetti from 'react-confetti';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 export const SuccessAnimation = () => {
   const [show, setShow] = useState(true);
@@ -18,8 +18,8 @@ export const SuccessAnimation = () => {
         width={window.innerWidth}
         height={window.innerHeight}
         recycle={false}
-        numberOfPieces={300}
-        gravity={0.15}
+        numberOfPieces={500}
+        gravity={0.2}
       />
       <motion.div
         initial={{ scale: 0, opacity: 0 }}
@@ -77,12 +77,13 @@ export const LevelUpAnimation = ({ newLevel }) => {
   useEffect(() => {
     const timer = setTimeout(() => setShow(false), 3000);
     return () => clearTimeout(timer);
-  }, []);
+  }, [newLevel]);
 
   if (!show) return null;
 
   return (
     <motion.div
+      key={`levelup-${newLevel}`}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
@@ -90,10 +91,7 @@ export const LevelUpAnimation = ({ newLevel }) => {
     >
       <motion.div
         initial={{ scale: 0 }}
-        animate={{ 
-          scale: 1,
-          rotate: [0, 5, -5, 0],
-        }}
+        animate={{ scale: 1 }}
         transition={{ 
           type: 'spring',
           stiffness: 100,
@@ -101,27 +99,8 @@ export const LevelUpAnimation = ({ newLevel }) => {
         }}
         className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-4xl font-bold p-8 rounded-lg shadow-lg"
       >
-        <motion.div
-          animate={{ 
-            scale: [1, 1.1, 1],
-            y: [0, -10, 0]
-          }}
-          transition={{ 
-            duration: 0.5,
-            repeat: Infinity,
-            repeatType: 'reverse'
-          }}
-        >
-          LEVEL UP! 🎉
-        </motion.div>
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="text-2xl mt-4"
-        >
-          Новый уровень: {newLevel}
-        </motion.div>
+        LEVEL UP! 🎉
+        <div className="text-2xl mt-4">Новый уровень: {newLevel}</div>
       </motion.div>
     </motion.div>
   );

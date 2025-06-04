@@ -3,9 +3,9 @@ import React from 'react';
 export default function ApiResponseViewer({ response, error, isLoading }) {
   if (isLoading) {
     return (
-      <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+      <div className="mt-4 p-4 bg-white border border-blue-200 rounded-lg">
         <div className="flex items-center">
-          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500 mr-2"></div>
+          <div className="animate-spin rounded-full h-4 w-4 border-b-2  border-blue-500 mr-2"></div>
           <span>Выполняем запрос...</span>
         </div>
       </div>

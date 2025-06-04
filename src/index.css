@@ -2,102 +2,87 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  margin: 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
-    "Ubuntu", "Cantarell", "Fira Sans", "Droid Sans", "Helvetica Neue",
-    sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-code {
-  font-family: source-code-pro, Menlo, Monaco, Consolas, "Courier New",
-    monospace;
-}
- 
-
- 
-
- 
-
- 
-
-/* Прогресс бар в Navbar */
-.progress-container {
-  width: 120px;
-}
-
-.progress-bar {
-  height: 6px;
-  background-color: #E5E7EB;
-  border-radius: 3px;
-  overflow: hidden;
-}
-
-.progress-fill {
-  height: 100%;
-  background-color: #3B82F6;
-  transition: width 0.3s ease;
-}
-
-
-/* Базовые стили */
-body {
+:root, .theme-default {
   --editor-bg: #ffffff;
   --editor-text: #000000;
   --bg-primary: #f3f4f6;
   --text-primary: #111827;
   --border-color: #e5e7eb;
+  --bg-primaryback: white;  
 }
 
-/* Темная тема */
-body.theme-dark {
+.theme-dark {
   --editor-bg: #1e1e1e;
   --editor-text: #d4d4d4;
   --bg-primary: #2d2d2d;
   --text-primary: #ffffff;
   --border-color: #4b5563;
+  --bg-primaryback: grey;  
 }
 
-/* Ретро тема */
-body.theme-retro {
+.bg-primary {
+  background-color: var(--bg-primaryback) !important;
+}
+
+.theme-retro {
   --editor-bg: #f0e6d2;
   --editor-text: #5c4d3c;
   --bg-primary: #e5d9c0;
   --text-primary: #3a3229;
   --border-color: #d1c7b7;
+  --bg-primaryback: rgb(219, 194, 178);  
 }
 
-/* Высококонтрастная тема */
-body.theme-high-contrast {
+.theme-high-contrast {
   --editor-bg: #000000;
   --editor-text: #ffff00;
   --bg-primary: #000000;
   --text-primary: #ffffff;
   --border-color: #ffff00;
+  --bg-primaryback: grey;  
 }
 
-/* Применение переменных */
 body {
-  background-color: var(--bg-primary);
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--bg-primaryback);
   color: var(--text-primary);
+  transition: background-color 0.3s, color 0.3s;
 }
 
+/* Принудительное применение кастомных стилей */
+.bg-custom {
+  background-color: var(--bg-primary) !important;
+}
+
+.text-custom {
+  color: var(--text-primary) !important;
+}
+
+.border-custom {
+  border-color: var(--border-color) !important;
+}
+
+/* Переопределение Tailwind классов */
 .bg-white {
-  background-color: var(--bg-primary);
+  background-color: var(--bg-primary) !important;
+                                                
 }
 
 .text-gray-800 {
-  color: var(--text-primary);
+  color: var(--text-primary) !important;
 }
 
 .border {
-  border-color: var(--border-color);
+  border-color: var(--border-color) !important;
 }
 
-/* Для редактора кода */
-.monaco-editor, .monaco-editor-background {
+/* Стили для редактора кода */
+.monaco-editor,
+.monaco-editor .margin,
+.monaco-editor-background {
   background-color: var(--editor-bg) !important;
 }
 

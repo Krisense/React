@@ -37,11 +37,9 @@ export default function Navbar() {
         {auth.currentUser && (
           <div className="flex items-center space-x-4">
             <div className="progress-container">
-              <div className="flex justify-between text-xs text-gray-500 mb-1">
+              <div className="flex justify-between text-xs  mb-1">
                 <span>Ур. {level}</span>
-                <span>
-                  {completedLessons.size}/{totalLessons}
-                </span>
+ 
               </div>
               <motion.div
                 className="progress-bar"
@@ -61,7 +59,7 @@ export default function Navbar() {
 
             <Link
               to="/dashboard"
-              className="flex items-center space-x-2 bg-blue-50 hover:bg-blue-100 px-4 py-2 rounded-lg transition"
+              className="flex items-center space-x-2 bg-primary hover:bg-blue-100 px-4 py-2 border rounded-lg transition"
             >
               <svg
                 className="w-5 h-5 text-blue-600"
@@ -76,7 +74,7 @@ export default function Navbar() {
                   d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
                 />
               </svg>
-              <span className="text-sm font-medium text-blue-600">Кабинет</span>
+              <span className="text-sm font-medium text-blue-600 " >Кабинет</span>
             </Link>
           </div>
         )}

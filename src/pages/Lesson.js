@@ -19,13 +19,14 @@ export default function Lesson() {
     xp,
     nextLevelXp,
     addXp,
-    showLevelUp,
     showXpGain,
     gainedXp,
     resetXp,
     XP_REWARDS,
     resetProgressForLesson,
     setXp,
+    showLevelUp,
+    levelUpAnimationKey
   } = useProgress();
   const [lesson, setLesson] = useState(null);
   const [currentExercise, setCurrentExercise] = useState(0);
@@ -225,7 +226,7 @@ export default function Lesson() {
       console.error("Ошибка проверки:", error);
       setFeedback(`❌ Ошибка выполнения: ${error.message}`);
       setShowError(true);
-      setTimeout(() => setShowError(false), 1000);
+      
     } finally {
       setIsApiLoading(false);
     }
@@ -238,19 +239,13 @@ export default function Lesson() {
     if (progress.some((item) => item.exerciseId === exerciseId)) return;
 
     try {
-      await setDoc(
-        doc(db, "users", auth.currentUser.uid),
-        {
-          completedExercises: arrayUnion({
-            exerciseId,
-            lessonId,
-            completedAt: new Date(),
-          }),
-          // Обновляем XP при сохранении прогресса
-          xp: xp + XP_REWARDS[lesson.difficulty], // Используем XP_REWARDS из контекста
-        },
-        { merge: true }
-      );
+    await updateDoc(doc(db, "users", auth.currentUser.uid), {
+      completedExercises: arrayUnion({
+        exerciseId,
+        lessonId,
+        completedAt: new Date(),
+      })
+    });
 
       // Обновляем локальное состояние
       const updatedProgress = [...progress, { exerciseId, lessonId }];
@@ -259,19 +254,18 @@ export default function Lesson() {
       // Обновляем XP
       addXp(lesson.difficulty);
 
-      // Проверяем завершение урока
-      const exercisesInLesson = updatedProgress.filter(
-        (item) => item.lessonId === lessonId
-      );
-      if (exercisesInLesson.length === lesson.exercises.length) {
-        const newCompletedLessons = new Set(completedLessons);
-        newCompletedLessons.add(lessonId);
-        setCompletedLessons(newCompletedLessons);
-      }
-    } catch (error) {
-      console.error("Ошибка сохранения:", error);
+    // Проверка завершения урока
+    const exercisesInLesson = updatedProgress.filter(
+      (item) => item.lessonId === lessonId
+    ).length;
+    
+    if (exercisesInLesson === lesson.exercises.length) {
+      setCompletedLessons(prev => new Set([...prev, lessonId]));
     }
-  };
+  } catch (error) {
+    console.error("Ошибка сохранения:", error);
+  }
+};
 
   const goToExercise = (index) => {
     if (!lesson || index < 0 || index >= lesson.exercises.length) return;
@@ -314,13 +308,13 @@ export default function Lesson() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen ">
       <Navbar />
           <AnimatePresence>  
-      {showSuccess && <SuccessAnimation />}
+      {showSuccess && <SuccessAnimation/>}
       {showError && <ErrorAnimation />}
       {showXpGain && <XpGainAnimation amount={gainedXp} />}
-      {showLevelUp && <LevelUpAnimation newLevel={level} />}
+      {showLevelUp && <LevelUpAnimation newLevel={level} key={`levelup-${levelUpAnimationKey}`} />}
     </AnimatePresence>
       <div className="max-w-4xl mx-auto p-4">
  
@@ -339,7 +333,7 @@ export default function Lesson() {
           </div>
         </div>
         {/* Шапка урока */}
-        <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+        <div className="mb-4 p-3 bg-white rounded-lg">
           <p className="text-sm text-blue-700">
             Ваш уникальный Student Id:{" "}
             <span className="font-mono font-bold">{studentId}</span>
@@ -382,7 +376,7 @@ export default function Lesson() {
 
         {/* Блок упражнения */}
         <div className="bg-white shadow rounded-lg overflow-hidden mb-6">
-          <div className="p-4 bg-gray-50 border-b">
+          <div className="p-4   border-b">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-semibold">
                 Упражнение {currentExercise + 1} из {totalExercises}
@@ -407,7 +401,7 @@ export default function Lesson() {
                 </button>
               </div>
             </div>
-            <p className="mt-2 text-gray-700">
+            <p className="mt-2 text-primary">
               {lesson.exercises[currentExercise]?.instruction}
             </p>
           </div>
@@ -422,10 +416,10 @@ export default function Lesson() {
             }}
           />
 
-          <div className="p-4 bg-gray-50 border-t">
+          <div className="p-4    border-t">
             <div className="space-y-4">
               <div
-                className={`p-2 rounded ${
+                className={`p-2 rounded bg-primary ${
                   feedback.includes("✅")
                     ? "bg-green-100 text-green-800"
                     : feedback.includes("❌")
@@ -445,7 +439,7 @@ export default function Lesson() {
               <button
                 onClick={runTests}
                 disabled={isCompleted || isApiLoading}
-                className={`px-4 py-2 rounded text-white ${
+                className={`px-4 py-2 rounded bg-primary  ${
                   isCompleted || isApiLoading
                     ? "bg-gray-400"
                     : "bg-green-500 hover:bg-green-600"

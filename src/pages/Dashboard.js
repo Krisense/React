@@ -108,7 +108,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-primaryback">
       <Navbar />
       <div className="max-w-4xl mx-auto p-6 pt-4">
      {/* Панель прогресса */}
@@ -238,7 +238,7 @@ function LessonProgressList({ userProgress, lessons, onLessonSelect }) {
         return (
           <div 
             key={lesson.id} 
-            className="p-4 border rounded-lg hover:bg-gray-50 cursor-pointer transition"
+            className="p-4 border rounded-lg hover:bg-blue-50 cursor-pointer transition"
             onClick={() => onLessonSelect(lesson.id)}
           >
             <div className="flex justify-between items-center mb-2">
